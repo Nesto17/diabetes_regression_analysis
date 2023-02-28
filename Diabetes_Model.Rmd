@@ -1,0 +1,83 @@
+---
+title: "Diabetes"
+author: "ernestsalim"
+date: "2023-02-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library("readr")
+library("tidyr")
+library("dplyr")
+library("car")
+```
+
+```{r}
+diabetes <- read.csv("diabetes.csv")
+```
+
+```{r}
+diabetes <- diabetes %>% filter(Insulin != 0) %>% select(c(2,3,5,6,7,8,9))
+model <- lm(Glucose ~ Insulin+BMI+BloodPressure+DiabetesPedigreeFunction+Age+Outcome)
+```
+
+```{r}
+# Pairs
+pairs(diabetes)
+```
+
+```{r}
+# Model summary
+summary(model)
+```
+
+```{r}
+# ANOVA Table
+anova(model)
+```
+
+```{r}
+# Plot model
+par(mfrow = c(2,2))
+plot(model)
+
+# Good: Constant variance, Multi Colinearity
+# Bad: Normality, outliers & leverage
+```
+
+```{r}
+# Leverage Points
+hatvalues(model)[hatvalues(model) > 2 * mean(hatvalues(model))]
+```
+
+```{r}
+# Transformation
+model_trf <- lm(log(Glucose) ~ log(Insulin)+log(BMI)+log(BloodPressure)+log(DiabetesPedigreeFunction)+log(Age)+log(Outcome))
+```
+
+```{r}
+par(mfrow=c(2, 3))
+avPlot(model, variable = "BloodPressure", ask = F)
+avPlot(model, variable = "Insulin", ask = F)
+avPlot(model, variable = "BMI", ask = F)
+avPlot(model, variable = "DiabetesPedigreeFunction", ask = F)
+avPlot(model, variable = "Age", ask = F)
+avPlot(model, variable = "Outcome", ask = F)
+```
+
+```{r}
+vif(model)
+```
+
+
+
+
+
+
+
+
+

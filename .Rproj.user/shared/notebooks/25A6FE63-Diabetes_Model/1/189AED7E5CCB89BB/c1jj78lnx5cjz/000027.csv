@@ -1,0 +1,1 @@
+"0","plot(BloodPressure,  t_stanRes, ylab = ""Standardized Residuals"")"

@@ -1,0 +1,1 @@
+"0","plot(BMI,  t_stanRes, ylab = ""Standardized Residuals"")"

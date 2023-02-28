@@ -1,0 +1,137 @@
+---
+title: "Diabetes"
+author: "ernestsalim"
+date: "2023-02-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library("readr")
+library("tidyr")
+library("dplyr")
+library("car")
+```
+
+```{r}
+diabetes <- read.csv("diabetes.csv")
+```
+
+```{r}
+diabetes <- diabetes %>% 
+  filter(Glucose != 0, BloodPressure != 0, Insulin != 0, BMI != 0, DiabetesPedigreeFunction != 0, Age != 0) %>%
+  select(c(2,3,5,6,7,8))
+# diabetes <- diabetes[-226, ]
+attach(diabetes)
+model <- lm(Glucose ~ Insulin+BMI+BloodPressure+DiabetesPedigreeFunction+Age)
+```
+
+```{r}
+# Pairs
+pairs(diabetes)
+```
+
+```{r}
+# Model summary
+summary(model)
+```
+
+```{r}
+# ANOVA Table
+anova(model)
+```
+
+```{r}
+# Plot model
+par(mfrow = c(2,2))
+plot(model)
+
+# Good: Constant variance, Multi Colinearity
+# Bad: Normality, outliers & leverage
+```
+
+```{r}
+# Leverage Points
+hatvalues(model)[hatvalues(model) > 2 * mean(hatvalues(model))]
+```
+
+```{r}
+stanRes <- rstandard(model)
+par(mfrow = c(2, 3))
+plot(Insulin, stanRes, ylab = "Standardized Residuals")
+plot(BMI, stanRes, ylab = "Standardized Residuals")
+plot(BloodPressure, stanRes, ylab = "Standardized Residuals")
+plot(DiabetesPedigreeFunction, stanRes, ylab = "Standardized Residuals")
+plot(Age, stanRes, ylab = "Standardized Residuals")
+```
+
+
+```{r}
+par(mfrow=c(2, 3))
+avPlot(model, variable = "BloodPressure", ask = F)
+avPlot(model, variable = "Insulin", ask = F)
+avPlot(model, variable = "BMI", ask = F)
+avPlot(model, variable = "DiabetesPedigreeFunction", ask = F)
+avPlot(model, variable = "Age", ask = F)
+```
+
+---
+
+```{r}
+# Transformation
+summary(powerTransform(cbind(Insulin, BMI, BloodPressure, DiabetesPedigreeFunction, Age) ~ 1))
+```
+
+```{r}
+# tInsulin <- Insulin^0.0402
+# tBMI <- BMI^0.1524
+# tBloodPressure <- BloodPressure^1.3039
+# tDiabetesPedigreeFunction <- DiabetesPedigreeFunction^0.0572
+# tAge <- Age^(-1.6341)
+
+# tInsulin <- log(Insulin)
+# tBMI <- log(BMI)
+# tBloodPressure <- log(BloodPressure)
+# tDiabetesPedigreeFunction <- log(DiabetesPedigreeFunction)
+# tAge <- log(Age)
+
+tInsulin <- log(Insulin)
+tBMI <- log(BMI)
+tBloodPressure <- BloodPressure
+tDiabetesPedigreeFunction <- log(DiabetesPedigreeFunction)
+tAge <- Age^(-2)
+
+t_model <- lm(Glucose ~ tInsulin+tBMI+tBloodPressure+tDiabetesPedigreeFunction+tAge)
+invResPlot(t_model)
+```
+
+```{r}
+tGlucose <- log(Glucose)
+t_model <- lm(tGlucose ~ tInsulin+tBMI+tBloodPressure+tDiabetesPedigreeFunction+tAge)
+summary(t_model)
+par(mfrow = c(2, 2))
+plot(t_model)
+```
+
+```{r}
+t_stanRes <- rstandard(t_model)
+par(mfrow = c(2, 3))
+plot(Insulin,  t_stanRes, ylab = "Standardized Residuals")
+plot(BMI,  t_stanRes, ylab = "Standardized Residuals")
+plot(BloodPressure,  t_stanRes, ylab = "Standardized Residuals")
+plot(DiabetesPedigreeFunction,  t_stanRes, ylab = "Standardized Residuals")
+plot(Age,  t_stanRes, ylab = "Standardized Residuals")
+```
+
+
+
+
+
+
+
+
+
+
