@@ -1,2 +1,0 @@
-"0","par(mfrow=c(2, 3))"
-"0","avPlot(model, variable = ""BloodPressure"", ask = F)"

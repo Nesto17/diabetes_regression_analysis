@@ -1,3 +1,0 @@
-"0","# Plot model"
-"0","par(mfrow = c(2,2))"
-"0","plot(model)"

@@ -1,3 +1,0 @@
-"0","t_stanRes <- rstandard(t_model)"
-"0","par(mfrow = c(2, 3))"
-"0","plot(Insulin,  t_stanRes, ylab = ""Standardized Residuals"")"
