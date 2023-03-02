@@ -14,6 +14,7 @@ library("readr")
 library("tidyr")
 library("dplyr")
 library("car")
+library("leaps")
 ```
 
 ```{r}
@@ -33,6 +34,7 @@ model <- lm(Glucose ~ Insulin+BMI+BloodPressure+DiabetesPedigreeFunction+Age)
 # Pairs
 pairs(diabetes)
 ```
+Visually speaking, from the above scatterplot matrices, we can see that the correlation between the variables is not very strong. Moreover, in some of the scatterplots, there are existences of influential points. Finally, the relationship between Glucose and Insulin is the most relevant and statistically significant compared to the other relationships.
 
 ```{r}
 # Model summary
@@ -48,15 +50,28 @@ anova(model)
 # Plot model
 par(mfrow = c(2,2))
 plot(model)
-
-# Good: Constant variance, Multi Colinearity
-# Bad: Normality, outliers & leverage
 ```
 
 ```{r}
 # Leverage Points
-hatvalues(model)[hatvalues(model) > 2 * mean(hatvalues(model))]
+hats <- hatvalues(model)
+leverages <- hats[hats > 2 * mean(hats)]
+outliers <- hats[abs(rstandard(model)) >= 2]
+
+leverages
+outliers
+outliers[names(outliers) %in% names(leverages)]
 ```
+
+```{r}
+vif(model)
+```
+Model assumptions that are violated
+
+1. Variables are not distributed normally. Observation can be seen in Q-Q Plot.
+2. Outliers and bad leverages exist (as seen in the code below)
+3. Relationship between predictor variables and response variable is somewhat non-linear (quadratic).
+
 
 ```{r}
 stanRes <- rstandard(model)
@@ -86,18 +101,6 @@ summary(powerTransform(cbind(Insulin, BMI, BloodPressure, DiabetesPedigreeFuncti
 ```
 
 ```{r}
-# tInsulin <- Insulin^0.0402
-# tBMI <- BMI^0.1524
-# tBloodPressure <- BloodPressure^1.3039
-# tDiabetesPedigreeFunction <- DiabetesPedigreeFunction^0.0572
-# tAge <- Age^(-1.6341)
-
-# tInsulin <- log(Insulin)
-# tBMI <- log(BMI)
-# tBloodPressure <- log(BloodPressure)
-# tDiabetesPedigreeFunction <- log(DiabetesPedigreeFunction)
-# tAge <- log(Age)
-
 tInsulin <- log(Insulin)
 tBMI <- log(BMI)
 tBloodPressure <- BloodPressure
@@ -107,6 +110,15 @@ tAge <- Age^(-2)
 t_model <- lm(Glucose ~ tInsulin+tBMI+tBloodPressure+tDiabetesPedigreeFunction+tAge)
 invResPlot(t_model)
 ```
+
+After running powerTransform function, we can implement the suggested transformation for each predictor based on the R output. Based on the result of inverse response plot, we can see that the difference in RSS between lambda = -0.5 and lambda = 0 is very small, thus we can use 0 as the lambda. Detailed explanation:
+
+- Insulin: lambda = 0 (Log transformation)
+- BMI: lambda = 0 (Log transformation)
+- BloodPressure = 1 (No transformation needed)
+- DiabetesPedigreeFunction = 0 (Log transformation)
+- Age = -2 (Power transformation)
+- Glucose = 0 (Log transformation)
 
 ```{r}
 tGlucose <- log(Glucose)
@@ -125,6 +137,62 @@ plot(BloodPressure,  t_stanRes, ylab = "Standardized Residuals")
 plot(DiabetesPedigreeFunction,  t_stanRes, ylab = "Standardized Residuals")
 plot(Age,  t_stanRes, ylab = "Standardized Residuals")
 ```
+
+```{r}
+summary(regsubsets(as.matrix(cbind(tInsulin, tBMI, tBloodPressure, tDiabetesPedigreeFunction, tAge)), tGlucose))
+```
+
+
+```{r}
+om1 <- lm(tGlucose ~ tInsulin)
+om2 <- lm(tGlucose ~ tInsulin + tAge)
+om3 <- lm(tGlucose ~ tInsulin + tBloodPressure + tAge)
+om4 <- lm(tGlucose ~ tInsulin + tBloodPressure + tDiabetesPedigreeFunction  + tAge)
+om5 <- lm(tGlucose ~ tInsulin + tBMI + tBloodPressure + tDiabetesPedigreeFunction  + tAge)
+possible_models <- list(om1, om2, om3, om4, om5)
+p <- 1:5
+n <- nrow(diabetes)
+
+criterias_breakdown <- matrix(0, nrow = 5, ncol = 5)
+colnames(criterias_breakdown) <- c("Size", "Adj R2", "AIC", "AICc", "BIC")
+
+# Adjusted R-squared
+adj_R2 <- sapply(possible_models, function(mod) { summary(mod)$adj.r.squared })
+
+# AIC
+AIC <- sapply(possible_models, function(mod) { extractAIC(mod)[2] })
+
+# AICc
+AICc <- rep(0, 5)
+for (i in p) {
+  AICc[i] <- AIC[i] + ((2 * p[i]) * (p[i] + 2) * (p[i] + 3)) / (n - p[i] - 1)
+}
+
+# BIC
+BIC <- sapply(possible_models, function(mod) { extractAIC(mod, k = log(n))[2] })
+
+criterias_breakdown[, 1:5] <- c(p, adj_R2, AIC, AICc, BIC)
+criterias_breakdown
+```
+
+- Adjusted R2, AIC, and AICc : Model 3
+- BIC : Model 2
+
+```{r}
+summary(om2)
+```
+
+```{r}
+summary(om3)
+```
+
+```{r}
+final_mod <- lm(tGlucose ~ tInsulin + tBloodPressure + tAge)
+summary(final_mod)
+```
+
+
+
 
 
 
