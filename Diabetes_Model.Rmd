@@ -15,6 +15,7 @@ library("tidyr")
 library("dplyr")
 library("car")
 library("leaps")
+library("caTools")
 ```
 
 ```{r}
@@ -25,10 +26,35 @@ diabetes <- read.csv("diabetes.csv")
 diabetes <- diabetes %>% 
   filter(Glucose != 0, BloodPressure != 0, Insulin != 0, BMI != 0, DiabetesPedigreeFunction != 0, Age != 0) %>%
   select(c(2,3,5,6,7,8))
-# diabetes <- diabetes[-226, ]
-attach(diabetes)
-model <- lm(Glucose ~ Insulin+BMI+BloodPressure+DiabetesPedigreeFunction+Age)
+
+set.seed(1)
+
+sample <- sample.split(diabetes$Glucose, SplitRatio = 0.7)
+ 
+diabetes_train = subset(diabetes, sample == TRUE)
+diabetes_test = subset(diabetes, sample == FALSE)
+
+attach(diabetes_train)
+
+model <- lm(Glucose ~ Insulin+BMI+BloodPressure+DiabetesPedigreeFunction+Age, data = diabetes_train)
 ```
+
+```{r}
+new <- data.frame(
+  BloodPressure = c(40),
+  Insulin = c(168),
+  BMI = c(43.1),
+  DiabetesPedigreeFunction = c(2.288),
+  Age = c(33)
+)
+
+# diabetes_test2 <- diabetes_test %>% select(-1)
+# diabetes_train2 <- diabetes_train %>% select(-1)
+
+predict(model, newdata = new)
+# (RSS <- mean(( - pred)^2))
+```
+
 
 ```{r}
 # Pairs
@@ -191,8 +217,9 @@ final_mod <- lm(tGlucose ~ tInsulin + tBloodPressure + tAge)
 summary(final_mod)
 ```
 
-
-
+```{r}
+predict(final_mod, newdata = diabetes_test)
+```
 
 
 
